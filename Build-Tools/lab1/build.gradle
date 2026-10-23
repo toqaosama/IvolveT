@@ -1,0 +1,25 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+group 'com.example'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile 'junit:junit:4.12'
+}
+
+mainClassName = 'com.example.calculator.Main'
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'com.example.calculator.Main'
+        )
+    }
+}
