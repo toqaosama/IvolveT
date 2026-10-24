@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-    image: YOUR_DOCKERHUB_USERNAME/ivolve-app:latest
+    image: toqaosama/ivolve-app:latest
     ports:
       - "3000:3000"
     environment:
