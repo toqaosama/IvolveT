@@ -501,3 +501,30 @@ or secret values
 
 This README intentionally does not contain the live join token or
 private key.
+
+
+
+kubeadm token create --print-join-command
+
+
+ubuntu@ip-172-31-16-131:~$ kubectl get pod -A
+NAMESPACE         NAME                                       READY   STATUS    RESTARTS      AGE
+calico-system     calico-kube-controllers-6669d6d488-zqwbh   1/1     Running   2 (58m ago)   4d2h
+calico-system     calico-node-kkfgw                          1/1     Running   2 (58m ago)   4d2h
+calico-system     calico-node-tv89j                          1/1     Running   0             3m15s
+calico-system     calico-typha-568f9d99b-xrkzc               1/1     Running   2 (58m ago)   4d2h
+calico-system     calico-webhooks-648955b74-2ffkn            1/1     Running   2 (58m ago)   4d2h
+calico-system     calico-webhooks-648955b74-qkh7q            1/1     Running   2 (58m ago)   4d2h
+calico-system     csi-node-driver-8qttd                      2/2     Running   4 (58m ago)   4d2h
+calico-system     csi-node-driver-k6spw                      2/2     Running   0             3m15s
+calico-system     goldmane-7fd9c7b87f-rcswf                  1/1     Running   2 (58m ago)   4d2h
+calico-system     whisker-dd6f47654-kqlsf                    2/2     Running   4 (58m ago)   4d2h
+kube-system       coredns-559f6c778d-cfshg                   1/1     Running   2 (58m ago)   4d2h
+kube-system       coredns-559f6c778d-p6jzf                   1/1     Running   2 (58m ago)   4d2h
+kube-system       etcd-ip-172-31-16-131                      1/1     Running   2 (58m ago)   4d2h
+kube-system       kube-apiserver-ip-172-31-16-131            1/1     Running   2 (58m ago)   4d2h
+kube-system       kube-controller-manager-ip-172-31-16-131   1/1     Running   2 (58m ago)   4d2h
+kube-system       kube-proxy-5rkdl                           1/1     Running   0             3m15s
+kube-system       kube-proxy-bcbhh                           1/1     Running   2 (58m ago)   4d2h
+kube-system       kube-scheduler-ip-172-31-16-131            1/1     Running   2 (58m ago)   4d2h
+tigera-operator   tigera-operator-7c96ff8686-4xj48           1/1     Running   2 (58m ago)   4d2h
