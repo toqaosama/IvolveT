@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "toqaosama/ivolveapp"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        FULL_IMAGE = "${IMAGE_NAME}:${IMAGE_TAG}"
+    }
+
+    stages {
+
+        stage('Build App') {
+            steps {
+                echo 'Installing application dependencies...'
+                sh 'npm install'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                sh 'docker build -t ${FULL_IMAGE} .'
+            }
+        }
+
+        stage('Scan Image with Trivy') {
+            steps {
+                echo 'Scanning Docker image...'
+                sh 'trivy image --severity HIGH,CRITICAL --exit-code 0 ${FULL_IMAGE}'
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${FULL_IMAGE}
+                    '''
+                }
+            }
+        }
+
+        stage('Delete Local Image') {
+            steps {
+                sh 'docker rmi ${FULL_IMAGE}'
+            }
+        }
+
+        stage('Update Deployment Manifest') {
+            steps {
+                sh '''
+                    sed -i "s|image: .*|image: ${FULL_IMAGE}|" deployment.yaml
+                    cat deployment.yaml
+                '''
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    kubectl apply -f deployment.yaml
+                    kubectl rollout status deployment/ivolveapp -n ivolve --timeout=120s
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout || true'
+        }
+
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check the console output.'
+        }
+    }
+}
