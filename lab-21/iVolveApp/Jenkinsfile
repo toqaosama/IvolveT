@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -62,10 +63,15 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                    kubectl apply -f deployment.yaml
-                    kubectl rollout status deployment/ivolveapp -n ivolve --timeout=120s
-                '''
+                withCredentials([file(
+                    credentialsId: 'kubeconfig',
+                    variable: 'KUBECONFIG'
+                )]) {
+                    sh '''
+                        kubectl apply -f deployment.yaml
+                        kubectl rollout status deployment/ivolveapp -n ivolve --timeout=120s
+                    '''
+                }
             }
         }
     }
@@ -84,3 +90,4 @@ pipeline {
         }
     }
 }
+
