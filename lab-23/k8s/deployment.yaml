@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: demoapp
-          image: localhost:5000/demoapp:15
+          image: localhost:5000/demoapp:7
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
