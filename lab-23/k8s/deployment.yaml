@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: demoapp
-  namespace: ivolve
+  namespace: ivolve-gitops
 spec:
   replicas: 2
   selector:
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: demoapp
-          image: localhost:5000/demoapp:latest
+          image: localhost:5000/demoapp:15
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

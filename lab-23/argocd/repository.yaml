@@ -1,0 +1,13 @@
+# Registers the GitHub repo in Argo CD (public repo: no credentials needed).
+# depth "1" = shallow clone, so Argo CD does not download the whole git history.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ivolvet-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: https://github.com/toqaosama/IvolveT.git
+  depth: "1"
