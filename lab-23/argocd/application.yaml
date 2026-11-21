@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/toqa68/IvolveT.git
+    repoURL: https://github.com/toqaosama/IvolveT.git
     targetRevision: main
     path: lab-23/k8s
   destination:

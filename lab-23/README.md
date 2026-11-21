@@ -67,7 +67,7 @@ Open https://localhost:8443 → user `admin` + the password above.
 **Settings → Repositories → Connect Repo**
 
 - Connection method: HTTPS
-- Repository URL: `https://github.com/toqa68/IvolveT.git`
+- Repository URL: `https://github.com/toqaosama/IvolveT.git`
 - (Public repo: no credentials needed. Private repo: GitHub username + personal access token.)
 
 Status must show **Successful**.
@@ -86,7 +86,7 @@ kubectl get applications -n argocd
 
 | Field | Value |
 |---|---|
-| repoURL | `https://github.com/toqa68/IvolveT.git` |
+| repoURL | `https://github.com/toqaosama/IvolveT.git` |
 | path | `lab-23/k8s` |
 | destination namespace | `ivolve` |
 | syncPolicy.automated | `prune: true`, `selfHeal: true` |
@@ -107,7 +107,7 @@ Global Trusted Pipeline Library:
 |---|---|
 | Name | `ivolve-shared-lib-gitops` |
 | Default version | `main` |
-| Repository | `https://github.com/toqa68/IvolveT.git` |
+| Repository | `https://github.com/toqaosama/IvolveT.git` |
 | Library Path | `lab-23/shared-library` |
 
 Pipeline job → Pipeline script from SCM → Script Path `lab-23/Jenkinsfile`.
