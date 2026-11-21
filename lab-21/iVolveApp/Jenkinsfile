@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -11,21 +12,24 @@ pipeline {
 
         stage('Build App') {
             steps {
-                echo 'Installing application dependencies...'
-                sh 'npm install'
+                dir('lab-21/iVolveApp') {
+                    echo 'Installing application dependencies...'
+                    sh 'npm install'
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker image...'
-                sh 'docker build -t ${FULL_IMAGE} .'
+                dir('lab-21/iVolveApp') {
+                    echo 'Building Docker image...'
+                    sh 'docker build -t ${FULL_IMAGE} .'
+                }
             }
         }
 
         stage('Scan Image with Trivy') {
             steps {
-                echo 'Scanning Docker image...'
                 sh 'trivy image --severity HIGH,CRITICAL --exit-code 0 ${FULL_IMAGE}'
             }
         }
@@ -53,19 +57,28 @@ pipeline {
 
         stage('Update Deployment Manifest') {
             steps {
-                sh '''
-                    sed -i "s|image: .*|image: ${FULL_IMAGE}|" deployment.yaml
-                    cat deployment.yaml
-                '''
+                dir('lab-21/iVolveApp') {
+                    sh '''
+                        sed -i "s|image: .*|image: ${FULL_IMAGE}|" deployment.yaml
+                        cat deployment.yaml
+                    '''
+                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                    kubectl apply -f deployment.yaml
-                    kubectl rollout status deployment/ivolveapp -n ivolve --timeout=120s
-                '''
+                dir('lab-21/iVolveApp') {
+                    withCredentials([file(
+                        credentialsId: 'kubeconfig',
+                        variable: 'KUBECONFIG'
+                    )]) {
+                        sh '''
+                            kubectl apply -f deployment.yaml
+                            kubectl rollout status deployment/ivolveapp -n ivolve --timeout=120s
+                        '''
+                    }
+                }
             }
         }
     }
@@ -84,3 +97,4 @@ pipeline {
         }
     }
 }
+
