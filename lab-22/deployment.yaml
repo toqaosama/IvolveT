@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: demoapp
-          image: toqaosama/demoapp:latest
+          image: localhost:5000/demoapp:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
