@@ -140,11 +140,17 @@ Pipeline job → Pipeline script from SCM → Script Path `lab-23/Jenkinsfile`.
 
 ### 6. Trigger the pipeline
 
-Click **Build Now**. The last stage pushes a commit like:
+Click **Build Now**. Build `#7` passed every stage, including **Push Manifest to GitHub**:
+
+![Lab 23 pipeline – build #7 success](screenshots/pipeline-stages.png)
+
+Jenkins pushed this commit to GitHub (only the image tag in `lab-23/k8s/deployment.yaml` changed):
 
 ```text
-Update image to localhost:5000/demoapp:<build> [skip ci]
+17b33a6  Update image to localhost:5000/demoapp:7 [skip ci]
 ```
+
+![Commit pushed by Jenkins](screenshots/github-commit.png)
 
 ### 7. Confirm Argo CD synced
 
@@ -152,6 +158,11 @@ Update image to localhost:5000/demoapp:<build> [skip ci]
 kubectl get application ivovle -n argocd     # SYNC STATUS: Synced, HEALTH: Healthy
 kubectl get deploy demoapp -n ivolve-gitops -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
+
+Argo CD detected the new commit by itself (auto-sync, about 5 minutes polling) and rolled out the
+new image. The application is synced to the same commit Jenkins pushed, and the deployment runs `demoapp:7`:
+
+![Argo CD synced to the Jenkins commit](screenshots/argocd-synced-cli.png)
 
 The image tag must match the Jenkins build number. In the UI the app shows the new commit hash.
 To sync immediately instead of waiting for the poll: **Refresh** in the UI, or
@@ -164,4 +175,6 @@ To sync immediately instead of waiting for the poll: **Refresh** in the UI, or
 | Argo CD login | [argocd-login.png](screenshots/argocd-login.png) |
 | Repo connected | [argocd-repo-connected.png](screenshots/argocd-repo-connected.png) |
 | Application ivovle synced/healthy | [argocd-app-ivovle.png](screenshots/argocd-app-ivovle.png) |
-| Jenkins pipeline + commit pushed by Jenkins | added after the `github` credential is created in Jenkins |
+| Jenkins pipeline build #7 | [pipeline-stages.png](screenshots/pipeline-stages.png) |
+| Commit pushed by Jenkins | [github-commit.png](screenshots/github-commit.png) |
+| Argo CD synced new image | [argocd-synced-cli.png](screenshots/argocd-synced-cli.png) |
