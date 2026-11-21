@@ -1,0 +1,46 @@
+---
+- name: Install MySQL server and Python driver
+  ansible.builtin.apt:
+    name:
+      - mysql-server
+      - python3-pymysql
+    state: present
+    update_cache: true
+
+- name: Start and enable MySQL
+  ansible.builtin.service:
+    name: mysql
+    state: started
+    enabled: true
+
+- name: Create the database
+  community.mysql.mysql_db:
+    name: "{{ mysql_db_name }}"
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+
+- name: Create the user with all privileges on the database
+  community.mysql.mysql_user:
+    name: "{{ mysql_user }}"
+    password: "{{ mysql_user_password }}"
+    host: localhost
+    priv: "{{ mysql_db_name }}.*:ALL"
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+  no_log: true
+
+- name: Validate - connect as the new user and list databases
+  ansible.builtin.command: >
+    mysql -u {{ mysql_user }} -p{{ mysql_user_password }} -e "SHOW DATABASES;"
+  register: mysql_dbs
+  changed_when: false
+  no_log: true
+
+- name: Show databases visible to the user
+  ansible.builtin.debug:
+    var: mysql_dbs.stdout_lines
+
+- name: Fail if the database is missing
+  ansible.builtin.assert:
+    that: mysql_db_name in mysql_dbs.stdout_lines
+    success_msg: "{{ mysql_user }} can see database {{ mysql_db_name }}"

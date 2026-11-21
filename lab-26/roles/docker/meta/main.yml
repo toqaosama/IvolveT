@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  role_name: docker
+  author: toqaosama
+  description: Install docker on Ubuntu
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+dependencies: []

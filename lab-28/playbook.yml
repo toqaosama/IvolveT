@@ -1,0 +1,36 @@
+---
+- name: Configure EC2 instances discovered by tag server=ivolve
+  hosts: server_ivolve
+  become: true
+
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Deploy a custom index page
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        mode: "0644"
+        content: |
+          <h1>iVolve Lab 28</h1>
+          <p>Configured by Ansible dynamic inventory</p>
+          <p>Instance: {{ inventory_hostname }} ({{ ansible_host }})</p>
+
+    - name: Start and enable Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Verify the page is served
+      ansible.builtin.uri:
+        url: http://localhost
+        return_content: true
+      register: page
+
+    - name: Show result
+      ansible.builtin.debug:
+        msg: "{{ page.content }}"

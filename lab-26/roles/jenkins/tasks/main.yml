@@ -1,0 +1,42 @@
+---
+- name: Install Java
+  ansible.builtin.apt:
+    name: [fontconfig, "{{ jenkins_java_package }}"]
+    state: present
+    update_cache: true
+
+- name: Ensure apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Jenkins repository key
+  ansible.builtin.get_url:
+    url: "{{ jenkins_key_url }}"
+    dest: /etc/apt/keyrings/jenkins-keyring.asc
+    mode: "0644"
+
+- name: Add Jenkins repository
+  ansible.builtin.apt_repository:
+    repo: "{{ jenkins_repo }}"
+    filename: jenkins
+    state: present
+
+- name: Install Jenkins
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+    update_cache: true
+  notify: Restart jenkins
+
+- name: Start and enable Jenkins
+  ansible.builtin.service:
+    name: jenkins
+    state: started
+    enabled: true
+
+- name: Wait for Jenkins to listen
+  ansible.builtin.wait_for:
+    port: "{{ jenkins_port }}"
+    timeout: 180

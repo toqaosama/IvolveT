@@ -1,0 +1,20 @@
+---
+- name: Install Docker
+  ansible.builtin.apt:
+    name: "{{ docker_package }}"
+    state: present
+    update_cache: true
+  notify: Restart docker
+
+- name: Start and enable Docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add users to the docker group
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_users }}"

@@ -1,0 +1,5 @@
+---
+# "stable" = look up the latest stable release, or pin e.g. "v1.37.2"
+kubectl_version: stable
+kubectl_arch: amd64
+kubectl_bin: /usr/local/bin/kubectl

@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  role_name: kubectl
+  author: toqaosama
+  description: Install kubectl on Ubuntu
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+dependencies: []

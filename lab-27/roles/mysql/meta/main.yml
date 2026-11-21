@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  role_name: mysql
+  author: toqaosama
+  description: Install MySQL, create the ivolve DB and ivolveuser
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+dependencies: []
