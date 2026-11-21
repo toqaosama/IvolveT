@@ -107,7 +107,7 @@ The node should show as **connected** in Jenkins.
 | Name | `ivolve-shared-lib` |
 | Default version | `main` |
 | Retrieval method | Modern SCM → Git |
-| Project repository | `https://github.com/toqa68/IvolveT.git` |
+| Project repository | `https://github.com/toqaosama/IvolveT.git` |
 | Library Path | `lab-22/shared-library` |
 
 ### 5. Credentials
@@ -121,7 +121,7 @@ The node should show as **connected** in Jenkins.
 
 **New Item → Pipeline → Pipeline script from SCM**
 
-- Repository: `https://github.com/toqa68/IvolveT.git`, branch `main`
+- Repository: `https://github.com/toqaosama/IvolveT.git`, branch `main`
 - Script Path: `lab-22/Jenkinsfile`
 
 Click **Build Now**.
