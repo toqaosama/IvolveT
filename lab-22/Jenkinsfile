@@ -5,7 +5,11 @@ pipeline {
     agent { label 'slave' }
 
     environment {
-        IMAGE = "toqaosama/demoapp:${BUILD_NUMBER}"
+        // Local registry inside minikube (addon "registry"), reached at localhost:5000.
+        // To push to Docker Hub instead: REGISTRY = "toqaosama" and DOCKER_CRED = "docker".
+        REGISTRY    = "localhost:5000"
+        DOCKER_CRED = ""
+        IMAGE       = "${REGISTRY}/demoapp:${BUILD_NUMBER}"
     }
 
     stages {
@@ -16,7 +20,7 @@ pipeline {
 
                     BuildImage(image: env.IMAGE,
                                appDir: 'lab-22/DemoApp',
-                               credentialsId: 'docker')
+                               credentialsId: env.DOCKER_CRED)
 
                     DeployOnK8s(image: env.IMAGE,
                                 manifest: 'lab-22/deployment.yaml',

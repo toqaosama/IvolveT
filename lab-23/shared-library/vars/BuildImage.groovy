@@ -1,10 +1,11 @@
 // BuildImage: build the Docker image, scan it with Trivy, push it to Docker Hub,
 // then delete the local copy.
 // Usage: BuildImage(image: 'user/demoapp:5', appDir: 'lab-22/DemoApp', credentialsId: 'docker')
+//        credentialsId: '' (or null) -> push without docker login (local registry, e.g. localhost:5000)
 def call(Map config = [:]) {
     def image         = config.image
     def appDir        = config.appDir ?: '.'
-    def credentialsId = config.credentialsId ?: 'docker'
+    def credentialsId = config.containsKey('credentialsId') ? config.credentialsId : 'docker'
 
     if (!image) {
         error 'BuildImage: "image" is required'
@@ -22,14 +23,17 @@ def call(Map config = [:]) {
     }
 
     stage('Push Image') {
-        withCredentials([usernamePassword(credentialsId: credentialsId,
-                                          usernameVariable: 'DOCKER_USER',
-                                          passwordVariable: 'DOCKER_PASS')]) {
-            sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            '''
+        if (credentialsId) {
+            withCredentials([usernamePassword(credentialsId: credentialsId,
+                                              usernameVariable: 'DOCKER_USER',
+                                              passwordVariable: 'DOCKER_PASS')]) {
+                sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                sh "docker push ${image}"
+                sh 'docker logout'
+            }
+        } else {
+            // local registry: no login needed
             sh "docker push ${image}"
-            sh 'docker logout'
         }
     }
 
