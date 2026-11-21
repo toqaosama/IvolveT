@@ -198,3 +198,5 @@ The deployment runs the image built by the pipeline (`localhost:5000/demoapp:15`
 | `docker login ... incorrect username or password` | Use a Docker Hub **access token** in the `docker` credential (Update credential → **Change Password**), or push to the local registry |
 | Checkout very slow / `early EOF` | The repo contains a 98 MB file (`Docker-Labs/lab3-4/lab-image.tar`). The job uses a reference repo on the agent (`/home/jenkins/ref/IvolveT.git`) so only new objects are downloaded |
 | `Could not find credentials entry with ID 'kubeconfig'` | Change the credential scope from System to Global |
+
+![Pipeline statges page](screenshots/piplinescreenshot.png)
