@@ -137,7 +137,6 @@ curl <url>        # Hello from Dockerized Spring Boot!
 ## Screenshots
 
 - Agent connected: `screenshots/agent-connected.png`
-  (screenshots/agent-connected.png)
 - Shared library configuration: `screenshots/shared-lib.png`
 - Pipeline stages: `screenshots/pipeline-stages.png`
 - Docker Hub image: `screenshots/dockerhub.png`
