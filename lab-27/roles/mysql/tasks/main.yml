@@ -14,15 +14,17 @@
     enabled: true
 
 - name: Create the database
-  community.mysql.mysql_db:
+  ansible.mysql.mysql_db:
     name: "{{ mysql_db_name }}"
     state: present
     login_unix_socket: "{{ mysql_socket }}"
 
 - name: Create the user with all privileges on the database
-  community.mysql.mysql_user:
+  ansible.mysql.mysql_user:
     name: "{{ mysql_user }}"
-    password: "{{ mysql_user_password }}"
+    # MySQL 8.4+ disables mysql_native_password, so use caching_sha2_password
+    plugin: caching_sha2_password
+    plugin_auth_string: "{{ mysql_user_password }}"
     host: localhost
     priv: "{{ mysql_db_name }}.*:ALL"
     state: present

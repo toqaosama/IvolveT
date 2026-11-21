@@ -10,6 +10,8 @@
 3. Update the pipeline to use them.
 4. Configure a Jenkins slave (agent) to run the pipeline.
 
+**Result:** build `#15` finished **SUCCESS** on the `slave` agent and the app runs on Kubernetes.
+
 ## Structure
 
 ```text
@@ -25,53 +27,76 @@ lab-22/
 │       ├── BuildApp.groovy
 │       ├── BuildImage.groovy
 │       └── DeployOnK8s.groovy
-├── agent/start-agent.sh         # starts the inbound Jenkins agent (WSL)
+├── agent/
+│   ├── Dockerfile               # image of the Jenkins slave (JDK 17, Maven, Docker CLI, Trivy, kubectl)
+│   └── start-agent.sh           # alternative: run the agent directly on a Linux machine
 ├── deployment.yaml              # Namespace + Deployment + NodePort Service
-└── Jenkinsfile
+├── Jenkinsfile
+└── screenshots/
 ```
 
 ## Architecture
 
 ```text
-GitHub repo ──► Jenkins master (Docker, :8080) ──► agent "slave" (WSL Ubuntu)
-                                                    ├─ mvn test / package
-                                                    ├─ docker build → trivy → push → rmi
-                                                    └─ kubectl apply → Minikube
+GitHub repo ──► Jenkins master (container "jenkins", :8080)
+                      │  label "slave"
+                      ▼
+               Jenkins slave (container "jenkins-slave" on the minikube network)
+                ├─ BuildApp     mvn test → mvn package
+                ├─ BuildImage   docker build → trivy scan → docker push localhost:5000/demoapp:<build> → docker rmi
+                └─ DeployOnK8s  sed new tag into deployment.yaml → kubectl apply → rollout status
+                                                   │
+                                                   ▼
+                                     Minikube (namespace "ivolve")
 ```
 
-The master only schedules; every stage runs on the agent with label `slave`,
-because the agent has Maven, Docker, Trivy and kubectl installed.
+The master only schedules (its executors are set to 0). Every stage runs on the agent with label `slave`.
+
+Images go to the **minikube registry addon** (`localhost:5000`), so the cluster pulls them without any
+Docker Hub login. To push to Docker Hub instead, change two lines in the `Jenkinsfile`:
+
+```groovy
+REGISTRY    = "toqaosama"   // Docker Hub user
+DOCKER_CRED = "docker"      // Jenkins credential with a Docker Hub access token
+```
 
 ## Shared libraries
 
 | Library | Stages | Parameters |
 |---|---|---|
 | `BuildApp` | Unit Test (`mvn test`), Build App (`mvn package`) | `appDir` |
-| `BuildImage` | Build Image, Scan Image (Trivy), Push Image, Delete Local Image | `image`, `appDir`, `credentialsId` |
+| `BuildImage` | Build Image, Scan Image (Trivy), Push Image, Delete Local Image | `image`, `appDir`, `credentialsId` (empty = no `docker login`) |
 | `DeployOnK8s` | Edit Deployment File (`sed` new tag), Deploy to Cluster (`kubectl apply` + rollout) | `image`, `manifest`, `deployment`, `namespace`, `kubeconfigId` |
 
-Pipeline usage:
+Pipeline usage ([Jenkinsfile](Jenkinsfile)):
 
 ```groovy
 @Library('ivolve-shared-lib') _
 ...
 BuildApp(appDir: 'lab-22/DemoApp')
-BuildImage(image: env.IMAGE, appDir: 'lab-22/DemoApp', credentialsId: 'docker')
+BuildImage(image: env.IMAGE, appDir: 'lab-22/DemoApp', credentialsId: env.DOCKER_CRED)
 DeployOnK8s(image: env.IMAGE, manifest: 'lab-22/deployment.yaml', deployment: 'demoapp', namespace: 'ivolve')
 ```
 
 ## Steps
 
-### 1. Prepare the agent machine (WSL Ubuntu)
-
-Tools required on the agent: `java 17`, `maven`, `docker`, `trivy`, `kubectl`, `git`.
+### 1. Local registry in minikube
 
 ```bash
-java -version && mvn -v && docker version && trivy --version && kubectl version --client
-minikube start --driver=docker
+minikube start
+minikube addons enable registry
+# forward localhost:5000 (Docker) to the registry inside minikube
+docker run -d --name registry-fwd --network minikube -p 5000:5000 \
+  alpine/socat tcp-listen:5000,fork,reuseaddr tcp-connect:$(minikube ip):5000
 ```
 
-### 2. Create the agent node in Jenkins
+### 2. Build the agent image
+
+```bash
+docker build -t ivolve/jenkins-agent:lab22 lab-22/agent
+```
+
+### 3. Create the agent node in Jenkins
 
 **Manage Jenkins → Nodes → New Node**
 
@@ -79,26 +104,37 @@ minikube start --driver=docker
 |---|---|
 | Name | `slave` |
 | Type | Permanent Agent |
-| Remote root directory | `/home/<user>/jenkins-agent` |
+| Remote root directory | `/home/jenkins/agent` |
 | Labels | `slave` |
+| Usage | Only build jobs with label expressions matching this node |
 | Launch method | Launch agent by connecting it to the controller |
 
 Then set **Built-In Node → Number of executors = 0** so builds only run on the agent.
 
-### 3. Start the agent
+### 4. Start the agent
 
-Copy the secret from the node page and run on WSL:
+Copy the secret from the node page and run the agent on the `minikube` network
+(so it can reach the cluster API at `192.168.58.2:8443`):
 
 ```bash
-export JENKINS_URL=http://localhost:8080
-export AGENT_NAME=slave
-export AGENT_SECRET=<secret>
-bash lab-22/agent/start-agent.sh
+docker run -d --name jenkins-slave --network minikube \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e JENKINS_URL=http://jenkins:8080 -e JENKINS_AGENT_NAME=slave \
+  -e JENKINS_SECRET=<secret> -e JENKINS_WEB_SOCKET=true \
+  -e JENKINS_AGENT_WORKDIR=/home/jenkins/agent \
+  ivolve/jenkins-agent:lab22
 ```
 
-The node should show as **connected** in Jenkins.
+> Start minikube **before** the Jenkins containers on the `minikube` network, otherwise one of them
+> takes the IP `192.168.58.2` that minikube needs.
 
-### 4. Register the shared library
+The node shows **Agent is connected**:
+
+![Agent slave connected](screenshots/agent-connected.png)
+
+![Nodes list](screenshots/nodes.png)
+
+### 5. Register the shared library
 
 **Manage Jenkins → System → Global Trusted Pipeline Libraries → Add**
 
@@ -110,34 +146,55 @@ The node should show as **connected** in Jenkins.
 | Project repository | `https://github.com/toqaosama/IvolveT.git` |
 | Library Path | `lab-22/shared-library` |
 
-### 5. Credentials
+![Global trusted pipeline library](screenshots/shared-libraries.png)
 
-| ID | Type | Purpose |
-|---|---|---|
-| `docker` | Username with password | Docker Hub user + access token |
-| `kubeconfig` | Secret file | kubeconfig of the Minikube cluster (from the agent: `kubectl config view --raw --flatten`) |
+### 6. Credentials
 
-### 6. Create the pipeline job
+| ID | Type | Scope | Purpose |
+|---|---|---|---|
+| `kubeconfig` | Secret file | **Global** | kubeconfig of the minikube cluster (`kubectl config view --raw --flatten`) |
+| `docker` | Username with password | Global | only needed when pushing to Docker Hub (access token as password) |
+
+> The `kubeconfig` credential must have **Global** scope. With **System** scope, jobs fail with
+> `Could not find credentials entry with ID 'kubeconfig'`.
+
+### 7. Create the pipeline job
 
 **New Item → Pipeline → Pipeline script from SCM**
 
-- Repository: `https://github.com/toqaosama/IvolveT.git`, branch `main`
+- Repository: `https://github.com/toqaosama/IvolveT.git`, branch `*/main`
 - Script Path: `lab-22/Jenkinsfile`
+
+![Pipeline job configuration](screenshots/job-config.png)
 
 Click **Build Now**.
 
-### 7. Verify
+### 8. Pipeline result
+
+All stages pass on the `slave` agent: Checkout → Unit Test → Build App → Build Image → Scan Image →
+Push Image → Delete Local Image → Edit Deployment File → Deploy to Cluster.
+
+![Pipeline stages – build #15 success](screenshots/pipeline-stages.png)
+
+![Pipeline job page](screenshots/pipeline-job.png)
+
+### 9. Verify on Kubernetes
 
 ```bash
-kubectl get deploy,pods,svc -n ivolve
-minikube service demoapp-svc -n ivolve --url
-curl <url>        # Hello from Dockerized Spring Boot!
+kubectl get deploy demoapp -n ivolve
+kubectl get pods -n ivolve -l app=demoapp -o wide
+kubectl get svc demoapp-svc -n ivolve
 ```
 
-## Screenshots
+The deployment runs the image built by the pipeline (`localhost:5000/demoapp:15`) and the app answers
+`Hello from Dockerized Spring Boot!`:
 
-- Agent connected: `screenshots/agent-connected.png`
-- Shared library configuration: `screenshots/shared-lib.png`
-- Pipeline stages: `screenshots/pipeline-stages.png`
-- Docker Hub image: `screenshots/dockerhub.png`
-- Pods running: `screenshots/pods.png`
+![Deployment, pods, service and app response](screenshots/k8s-deployment.png)
+
+## Troubleshooting notes
+
+| Problem | Fix |
+|---|---|
+| `docker login ... incorrect username or password` | Use a Docker Hub **access token** in the `docker` credential (Update credential → **Change Password**), or push to the local registry |
+| Checkout very slow / `early EOF` | The repo contains a 98 MB file (`Docker-Labs/lab3-4/lab-image.tar`). The job uses a reference repo on the agent (`/home/jenkins/ref/IvolveT.git`) so only new objects are downloaded |
+| `Could not find credentials entry with ID 'kubeconfig'` | Change the credential scope from System to Global |

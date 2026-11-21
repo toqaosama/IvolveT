@@ -54,13 +54,19 @@ kubectl get pods -n argocd -w        # wait until all are Running
 
 ### 2. Open the UI and log in
 
+For a local lab the server runs without TLS (no certificate warning):
+
 ```bash
-kubectl port-forward svc/argocd-server -n argocd 8443:443
+kubectl -n argocd patch configmap argocd-cmd-params-cm --type merge -p '{"data":{"server.insecure":"true"}}'
+kubectl -n argocd rollout restart deploy/argocd-server
+kubectl port-forward --address 0.0.0.0 svc/argocd-server -n argocd 8443:80
 # initial admin password
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
 ```
 
-Open https://localhost:8443 → user `admin` + the password above.
+Open http://127.0.0.1:8443 → user **`admin`** (built in, no need to create it) + the password above.
+
+![Argo CD login page](screenshots/argocd-login.png)
 
 ### 3. Connect the GitHub repository
 
@@ -70,14 +76,28 @@ Open https://localhost:8443 → user `admin` + the password above.
 - Repository URL: `https://github.com/toqaosama/IvolveT.git`
 - (Public repo: no credentials needed. Private repo: GitHub username + personal access token.)
 
-Status must show **Successful**.
+Or declaratively ([repository.yaml](argocd/repository.yaml), shallow clone because the repo contains a 98 MB file):
+
+```bash
+kubectl apply -f lab-23/argocd/repository.yaml
+```
+
+Status must show **Successful**:
+
+![Repository connected](screenshots/argocd-repo-connected.png)
+
+> On a slow connection the first clone can time out (`context deadline exceeded`). Raise the timeouts:
+> ```bash
+> kubectl -n argocd patch configmap argocd-cmd-params-cm --type merge >   -p '{"data":{"controller.repo.server.timeout.seconds":"900","server.repo.server.timeout.seconds":"900"}}'
+> kubectl -n argocd set env deploy/argocd-repo-server ARGOCD_EXEC_TIMEOUT=15m
+> kubectl -n argocd rollout restart deploy/argocd-repo-server statefulset/argocd-application-controller
+> ```
 
 ### 4. Create the application `ivovle` with auto-sync
 
-```bash
-# remove the lab 22 deployment first so Argo CD owns the resources
-kubectl delete -f lab-22/deployment.yaml --ignore-not-found
+Lab 23 uses its own namespace `ivolve-gitops`, so it does not touch the Lab 22 deployment.
 
+```bash
 kubectl apply -f lab-23/argocd/application.yaml
 kubectl get applications -n argocd
 ```
@@ -88,9 +108,15 @@ kubectl get applications -n argocd
 |---|---|
 | repoURL | `https://github.com/toqaosama/IvolveT.git` |
 | path | `lab-23/k8s` |
-| destination namespace | `ivolve` |
+| destination namespace | `ivolve-gitops` |
 | syncPolicy.automated | `prune: true`, `selfHeal: true` |
 | syncOptions | `CreateNamespace=true` |
+
+The application is **Synced** and **Healthy**, and *Auto sync is enabled*:
+
+![Applications list](screenshots/argocd-applications.png)
+
+![Application ivovle – synced and healthy](screenshots/argocd-app-ivovle.png)
 
 ### 5. Configure Jenkins
 
@@ -98,7 +124,7 @@ Credentials:
 
 | ID | Type | Purpose |
 |---|---|---|
-| `docker` | Username with password | Docker Hub |
+| `kubeconfig` | Secret file (Global scope) | not used by this pipeline (Argo CD deploys) |
 | `github` | Username with password | GitHub username + Personal Access Token (scope `repo`) for the push |
 
 Global Trusted Pipeline Library:
@@ -117,14 +143,14 @@ Pipeline job → Pipeline script from SCM → Script Path `lab-23/Jenkinsfile`.
 Click **Build Now**. The last stage pushes a commit like:
 
 ```text
-Update image to toqaosama/demoapp:7 [skip ci]
+Update image to localhost:5000/demoapp:<build> [skip ci]
 ```
 
 ### 7. Confirm Argo CD synced
 
 ```bash
 kubectl get application ivovle -n argocd     # SYNC STATUS: Synced, HEALTH: Healthy
-kubectl get deploy demoapp -n ivolve -o jsonpath='{.spec.template.spec.containers[0].image}'
+kubectl get deploy demoapp -n ivolve-gitops -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
 
 The image tag must match the Jenkins build number. In the UI the app shows the new commit hash.
@@ -133,8 +159,9 @@ To sync immediately instead of waiting for the poll: **Refresh** in the UI, or
 
 ## Screenshots
 
-- Argo CD login: `screenshots/argocd-login.png`
-- Repo connected: `screenshots/argocd-repo.png`
-- Jenkins pipeline: `screenshots/pipeline.png`
-- Commit pushed by Jenkins: `screenshots/github-commit.png`
-- Application synced/healthy: `screenshots/argocd-synced.png`
+| Step | Screenshot |
+|---|---|
+| Argo CD login | [argocd-login.png](screenshots/argocd-login.png) |
+| Repo connected | [argocd-repo-connected.png](screenshots/argocd-repo-connected.png) |
+| Application ivovle synced/healthy | [argocd-app-ivovle.png](screenshots/argocd-app-ivovle.png) |
+| Jenkins pipeline + commit pushed by Jenkins | added after the `github` credential is created in Jenkins |

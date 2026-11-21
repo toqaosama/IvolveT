@@ -5,6 +5,10 @@
 1. Create separate roles for Docker, kubectl and Jenkins.
 2. Write a playbook that runs the roles.
 
+> **How it was run:** the control node is a Linux container (`ansible-control`, Python 3.12 +
+> `pip install ansible-core`) because `sudo` on the WSL machine needs a password. Any Linux
+> control node works the same way. Managed node: AWS EC2 Ubuntu 26.04 (`75.101.215.238`).
+
 ## Structure
 
 ```text
@@ -39,6 +43,8 @@ ansible-galaxy init kubectl
 ansible-galaxy init jenkins
 ```
 
+![Roles tree](screenshots/roles-tree.png)
+
 ## Roles
 
 | Role | Tasks | Variables (defaults) |
@@ -61,6 +67,11 @@ ansible-playbook site.yml
 ansible-playbook site.yml --list-tasks   # list tasks per role
 ```
 
+Result: `ok=16 changed=0 failed=0`. Nothing changed because lab 25 had already installed the same
+tools, which shows that the roles are idempotent:
+
+![site.yml run](screenshots/site-run.png)
+
 ## Verify
 
 The `post_tasks` in `site.yml` print the versions. Manually:
@@ -73,6 +84,7 @@ ansible managed -b -m command -a "systemctl is-active jenkins"
 
 ## Screenshots
 
-- `screenshots/roles-tree.png`
-- `screenshots/site-run.png`
-- `screenshots/verify.png`
+| Step | Screenshot |
+|---|---|
+| Roles structure | [roles-tree.png](screenshots/roles-tree.png) |
+| site.yml run | [site-run.png](screenshots/site-run.png) |

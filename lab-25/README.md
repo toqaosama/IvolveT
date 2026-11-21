@@ -10,6 +10,10 @@ Write one playbook that installs on the managed node:
 
 then verify the result on the managed node.
 
+> **How it was run:** the control node is a Linux container (`ansible-control`, Python 3.12 +
+> `pip install ansible-core`) because `sudo` on the WSL machine needs a password. Any Linux
+> control node works the same way. Managed node: AWS EC2 Ubuntu 26.04 (`75.101.215.238`).
+
 ## Files
 
 ```text
@@ -39,6 +43,12 @@ ansible-playbook playbook.yml --check      # dry run
 ansible-playbook playbook.yml
 ```
 
+![Syntax check](screenshots/syntax-check.png)
+
+Result: `ok=14 changed=3 failed=0` (Docker was already installed by lab 24, so only the Jenkins tasks changed):
+
+![Playbook run](screenshots/playbook-run.png)
+
 Run it a second time: every task should be `ok` (no `changed`) - the playbook is idempotent.
 
 ## Verify on the managed node
@@ -51,10 +61,14 @@ systemctl status jenkins
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 ```
 
+![Verify on the managed node](screenshots/verify.png)
+
 Open `http://<MANAGED_NODE_IP>:8080` (port 8080 must be open in the EC2 security group).
 
 ## Screenshots
 
-- `screenshots/playbook-run.png`
-- `screenshots/verify.png`
-- `screenshots/jenkins-ui.png`
+| Step | Screenshot |
+|---|---|
+| Syntax check | [syntax-check.png](screenshots/syntax-check.png) |
+| Playbook run | [playbook-run.png](screenshots/playbook-run.png) |
+| Verify on managed node | [verify.png](screenshots/verify.png) |
