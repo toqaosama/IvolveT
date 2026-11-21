@@ -1,0 +1,42 @@
+// Lab 23 pipeline: CI in Jenkins, CD by Argo CD (GitOps).
+@Library('ivolve-shared-lib-gitops') _
+
+pipeline {
+    agent { label 'slave' }
+
+    environment {
+        IMAGE = "toqaosama/demoapp:${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout branch') {
+            steps {
+                // SCM checkout leaves a detached HEAD; switch to main so the push works
+                sh 'git checkout -B main origin/main'
+            }
+        }
+
+        stage('CI + GitOps') {
+            steps {
+                script {
+                    BuildApp(appDir: 'lab-22/DemoApp')
+
+                    BuildImage(image: env.IMAGE,
+                               appDir: 'lab-22/DemoApp',
+                               credentialsId: 'docker')
+
+                    DeployOnK8s(image: env.IMAGE,
+                                manifest: 'lab-23/k8s/deployment.yaml',
+                                branch: 'main',
+                                gitCredentialsId: 'github')
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo "Pushed ${IMAGE} to Git - Argo CD will sync the app" }
+        failure { echo 'Pipeline failed - check the console output' }
+        always  { cleanWs() }
+    }
+}

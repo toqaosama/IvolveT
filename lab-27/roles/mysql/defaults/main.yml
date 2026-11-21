@@ -1,0 +1,6 @@
+---
+mysql_db_name: ivolve
+mysql_user: ivolveuser
+# mysql_user_password comes from the vault file (group_vars/managed/vault.yml)
+mysql_user_password: "{{ vault_mysql_user_password }}"
+mysql_socket: /var/run/mysqld/mysqld.sock

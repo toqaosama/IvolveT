@@ -1,0 +1,7 @@
+---
+- name: Install and configure MySQL
+  hosts: managed
+  become: true
+
+  roles:
+    - mysql

@@ -1,0 +1,4 @@
+---
+# Template only. Create the real encrypted file with:
+#   ansible-vault create group_vars/managed/vault.yml
+vault_mysql_user_password: "ChangeMe_StrongPass123"

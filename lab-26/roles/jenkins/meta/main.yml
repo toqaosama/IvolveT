@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  role_name: jenkins
+  author: toqaosama
+  description: Install jenkins on Ubuntu
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+dependencies: []

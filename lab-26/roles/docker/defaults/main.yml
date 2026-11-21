@@ -1,0 +1,4 @@
+---
+docker_package: docker.io
+docker_users:
+  - "{{ ansible_user }}"

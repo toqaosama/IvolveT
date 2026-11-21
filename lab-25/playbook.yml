@@ -1,0 +1,89 @@
+---
+- name: Configure managed node - Docker, kubectl, Jenkins
+  hosts: managed
+  become: true
+
+  vars:
+    jenkins_key_url: https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+
+  tasks:
+    # ---------------- Docker ----------------
+    - name: Install Docker
+      ansible.builtin.apt:
+        name: docker.io
+        state: present
+        update_cache: true
+
+    - name: Start and enable Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add the remote user to the docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    # ---------------- kubectl ----------------
+    - name: Get latest stable kubectl version
+      ansible.builtin.uri:
+        url: https://dl.k8s.io/release/stable.txt
+        return_content: true
+      register: kubectl_version
+
+    - name: Download kubectl binary
+      ansible.builtin.get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version.content | trim }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+
+    # ---------------- Jenkins ----------------
+    - name: Install Java (required by Jenkins)
+      ansible.builtin.apt:
+        name: [fontconfig, openjdk-21-jre]
+        state: present
+
+    - name: Ensure apt keyrings directory exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Jenkins repository key
+      ansible.builtin.get_url:
+        url: "{{ jenkins_key_url }}"
+        dest: /etc/apt/keyrings/jenkins-keyring.asc
+        mode: "0644"
+
+    - name: Add Jenkins apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+        filename: jenkins
+        state: present
+
+    - name: Install Jenkins
+      ansible.builtin.apt:
+        name: jenkins
+        state: present
+        update_cache: true
+
+    - name: Start and enable Jenkins
+      ansible.builtin.service:
+        name: jenkins
+        state: started
+        enabled: true
+
+    # ---------------- Verify ----------------
+    - name: Verify installed versions
+      ansible.builtin.shell: |
+        docker --version
+        kubectl version --client
+        systemctl is-active jenkins
+      register: verify
+      changed_when: false
+
+    - name: Show versions
+      ansible.builtin.debug:
+        var: verify.stdout_lines

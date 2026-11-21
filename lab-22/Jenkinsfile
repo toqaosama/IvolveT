@@ -1,0 +1,36 @@
+// Lab 22 pipeline: runs on the Jenkins agent (label "slave") and calls the shared library.
+@Library('ivolve-shared-lib') _
+
+pipeline {
+    agent { label 'slave' }
+
+    environment {
+        IMAGE = "toqaosama/demoapp:${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('CI/CD') {
+            steps {
+                script {
+                    BuildApp(appDir: 'lab-22/DemoApp')
+
+                    BuildImage(image: env.IMAGE,
+                               appDir: 'lab-22/DemoApp',
+                               credentialsId: 'docker')
+
+                    DeployOnK8s(image: env.IMAGE,
+                                manifest: 'lab-22/deployment.yaml',
+                                deployment: 'demoapp',
+                                namespace: 'ivolve',
+                                kubeconfigId: 'kubeconfig')
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo "Deployed ${IMAGE} successfully" }
+        failure { echo 'Pipeline failed - check the console output' }
+        always  { cleanWs() }
+    }
+}

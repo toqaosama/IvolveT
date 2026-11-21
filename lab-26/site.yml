@@ -1,0 +1,22 @@
+---
+- name: Configure managed node using roles
+  hosts: managed
+  become: true
+
+  roles:
+    - docker
+    - kubectl
+    - jenkins
+
+  post_tasks:
+    - name: Verify tools
+      ansible.builtin.shell: |
+        docker --version
+        kubectl version --client
+        systemctl is-active jenkins
+      register: verify
+      changed_when: false
+
+    - name: Show versions
+      ansible.builtin.debug:
+        var: verify.stdout_lines
